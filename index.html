@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>八段锦运动辅助干眼治疗研究招募</title>
+    <!-- 引入 Tailwind CSS 进行样式美化 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 用于解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* 简单的淡入动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- 图标组件 (替换 lucide-react 库，确保单文件独立运行) ---
+        const Icon = ({ children, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const ChevronRight = ({ className }) => <Icon className={className}><polyline points="9 18 15 12 9 6"></polyline></Icon>;
+        const CheckCircle = ({ className }) => <Icon className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></Icon>;
+        const XCircle = ({ className }) => <Icon className={className}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></Icon>;
+        const AlertCircle = ({ className }) => <Icon className={className}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></Icon>;
+        const PlayCircle = ({ className }) => <Icon className={className}><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></Icon>;
+        const Info = ({ className }) => <Icon className={className}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></Icon>;
+        const RefreshCw = ({ className }) => <Icon className={className}><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></Icon>;
+        const ClipboardList = ({ className }) => <Icon className={className}><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></Icon>;
+        const Activity = ({ className }) => <Icon className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></Icon>;
+        const Clock = ({ className }) => <Icon className={className}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></Icon>;
+        const FileText = ({ className }) => <Icon className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></Icon>;
+
+
+        // --- 主要应用逻辑 ---
+
+        const App = () => {
+            const [step, setStep] = useState(0);
+            const [osdiScore, setOsdiScore] = useState(0);
+            const [osdiSeverity, setOsdiSeverity] = useState('');
+            const [userInfo, setUserInfo] = useState({
+                nameAndWechat: '',
+                otherDiseases: '',
+                eyeDrops: ''
+            });
+            const [rejectReason, setRejectReason] = useState('');
+            const [historyResult, setHistoryResult] = useState(null);
+
+            useEffect(() => {
+                const saved = localStorage.getItem('dryEyeRecruitmentResult');
+                if (saved) {
+                    setHistoryResult(JSON.parse(saved));
+                }
+            }, []);
+
+            const saveResult = (score, severity, info) => {
+                const data = { score, severity, info, date: new Date().toLocaleString() };
+                localStorage.setItem('dryEyeRecruitmentResult', JSON.stringify(data));
+                setHistoryResult(data);
+            };
+
+            const handleRestart = () => {
+                setStep(0);
+                setRejectReason('');
+                setOsdiScore(0);
+            };
+
+            const handleOSDIResult = (score, severity) => {
+                setOsdiScore(score);
+                setOsdiSeverity(severity);
+                
+                // 入组条件：18-80分
+                if (score >= 18 && score <= 80) {
+                    setStep(2);
+                } else {
+                    handleReject(`您的OSDI评分为 ${score} 分。实在抱歉，您的评分暂时不符合本研究的入组条件，感谢您的关注！`);
+                }
+            };
+
+            const handleReject = (reason) => {
+                setRejectReason(reason);
+                setStep(6);
+            };
+
+            const handleInfoSubmit = () => {
+                saveResult(osdiScore, osdiSeverity, userInfo);
+                setStep(5);
+            };
+
+            const renderStep = () => {
+                switch (step) {
+                    case 0: return <IntroStep onNext={() => setStep(1)} />;
+                    case 1: return <OSDIStep onNext={handleOSDIResult} />;
+                    case 2: return <ExclusionStep onNext={() => setStep(3)} onReject={(reason) => handleReject(reason)} />;
+                    case 3: return <CommitmentStep onNext={() => setStep(4)} onReject={(reason) => handleReject(reason)} />;
+                    case 4: return <InfoStep userInfo={userInfo} setUserInfo={setUserInfo} onNext={handleInfoSubmit} />;
+                    case 5: return <ResultStep score={osdiScore} severity={osdiSeverity} userInfo={userInfo} />;
+                    case 6: return <RejectStep reason={rejectReason} onRestart={handleRestart} />;
+                    default: return <IntroStep onNext={() => setStep(1)} />;
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+                    <div className="max-w-md mx-auto min-h-screen bg-white shadow-xl flex flex-col">
+                        <header className="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10">
+                            <h1 className="text-lg font-bold flex items-center">
+                                <Activity className="mr-2 h-5 w-5" />
+                                八段锦运动辅助干眼治疗研究
+                            </h1>
+                        </header>
+
+                        <main className="flex-grow p-4">
+                            {historyResult && step === 0 && (
+                                <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+                                    <span className="text-sm text-blue-700">您有上次的评估记录</span>
+                                    <button 
+                                        onClick={() => {
+                                            setOsdiScore(historyResult.score);
+                                            setOsdiSeverity(historyResult.severity);
+                                            setUserInfo(historyResult.info);
+                                            setStep(5);
+                                        }}
+                                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                                    >
+                                        查看记录
+                                    </button>
+                                </div>
+                            )}
+                            {renderStep()}
+                        </main>
+
+                        <footer className="bg-slate-100 p-3 text-center text-xs text-slate-500 border-t">
+                            <p>© 干眼门诊临床研究项目组</p>
+                            <p>本研究最终解释权归医生所有</p>
+                        </footer>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 子组件 ---
+
+        const IntroStep = ({ onNext }) => (
+            <div className="space-y-6 animate-fade-in">
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h2 className="text-xl font-bold text-blue-800 mb-2">项目介绍</h2>
+                    <p className="text-sm leading-relaxed text-slate-700">
+                        您好！我们正在开展一项关于<span className="font-bold text-blue-600">【八段锦运动辅助干眼治疗】</span>的临床研究。
+                        本项目旨在探索传统健身气功八段锦对缓解干眼症状的有效性。如果您受到干眼困扰，欢迎加入我们！
+                    </p>
+                </div>
+
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-slate-700 flex items-center">
+                        <PlayCircle className="w-4 h-4 mr-2 text-red-500" />
+                        什么是八段锦？(视频参考)
+                    </h3>
+                    
+                    <a href="https://www.bilibili.com/video/BV18KC9YDEYh/?share_source=copy_web&vd_source=d8884f836f9f219bf1e0d144c6acbf7f" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition group">
+                        <div className="font-medium text-slate-800 group-hover:text-blue-600">【Dr.双囍】别再神话八段锦了...</div>
+                        <div className="text-xs text-slate-400 mt-1">点击观看视频</div>
+                    </a>
+                    
+                    <a href="https://www.bilibili.com/video/BV1VsDpYXEqD/?share_source=copy_web&vd_source=d8884f836f9f219bf1e0d144c6acbf7f" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition group">
+                        <div className="font-medium text-slate-800 group-hover:text-blue-600">【国家体育总局】12分钟完整版跟练</div>
+                        <div className="text-xs text-slate-400 mt-1">点击观看视频</div>
+                    </a>
+                </div>
+
+                <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 text-xs text-amber-800">
+                    <p className="font-bold mb-1">免责声明：</p>
+                    <p>本应用仅用于受试者初步招募与筛查，不作为最终医疗诊断依据。入组资格最终解释权归研究医生所有。</p>
+                </div>
+
+                <button onClick={onNext} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center">
+                    开始预筛选 <ChevronRight className="ml-2 w-5 h-5" />
+                </button>
+            </div>
+        );
+
+        const OSDIStep = ({ onNext }) => {
+            const [responses, setResponses] = useState({});
+            const [error, setError] = useState('');
+            const [showResultModal, setShowResultModal] = useState(false);
+            const [calculationResult, setCalculationResult] = useState({ score: 0, severity: '' });
+
+            const questions = [
+                { id: 1, text: "眼睛对光敏感？", section: "A", required: true },
+                { id: 2, text: "感觉眼睛像进了沙子一样？", section: "A", required: true },
+                { id: 3, text: "眼睛疼痛？", section: "A", required: true },
+                { id: 4, text: "视力波动？", section: "A", required: true },
+                { id: 5, text: "视力差，看不清？", section: "A", required: true },
+                { id: 6, text: "读书、写字？", section: "B", required: false, context: "是否因视力/不适使以下活动受限：" },
+                { id: 7, text: "夜间驾驶？", section: "B", required: false, context: "是否因视力/不适使以下活动受限：" },
+                { id: 8, text: "玩电脑、游戏机？", section: "B", required: false, context: "是否因视力/不适使以下活动受限：" },
+                { id: 9, text: "看电视？", section: "B", required: false, context: "是否因视力/不适使以下活动受限：" },
+                { id: 10, text: "刮风？", section: "C", required: false, context: "眼睛在以下环境中是否感到不适：" },
+                { id: 11, text: "在非常干燥的环境？", section: "C", required: false, context: "眼睛在以下环境中是否感到不适：" },
+                { id: 12, text: "在开空调的房间里？", section: "C", required: false, context: "眼睛在以下环境中是否感到不适：" },
+            ];
+
+            const handleSelect = (id, value) => {
+                setResponses(prev => ({ ...prev, [id]: value }));
+                setError('');
+            };
+
+            const calculate = () => {
+                for (let i = 1; i <= 12; i++) {
+                    if (responses[i] === undefined) {
+                        setError("请完成所有题目后再提交");
+                        return;
+                    }
+                }
+
+                let sum = 0;
+                let count = 0;
+
+                questions.forEach(q => {
+                    const val = responses[q.id];
+                    if (val !== undefined && val !== -1) {
+                        sum += val;
+                        count++;
+                    }
+                });
+
+                if (count === 0) {
+                    setError("有效回答数不足，无法计算分数。");
+                    return;
+                }
+
+                const rawScore = (sum * 25) / count;
+                const finalScore = parseFloat(rawScore.toFixed(1));
+
+                let severity = "正常";
+                if (finalScore < 21) severity = "轻度症状 (参考)";
+                if (finalScore >= 21 && finalScore < 46) severity = "轻中度";
+                if (finalScore >= 46) severity = "中重度";
+
+                setCalculationResult({ score: finalScore, severity });
+                setShowResultModal(true);
+            };
+
+            const confirmResult = () => {
+                setShowResultModal(false);
+                onNext(calculationResult.score, calculationResult.severity);
+            };
+
+            const options = [
+                { val: 4, label: "全部时间" },
+                { val: 3, label: "大部分时间" },
+                { val: 2, label: "一半时间" },
+                { val: 1, label: "少部分时间" },
+                { val: 0, label: "无" },
+            ];
+
+            return (
+                <div className="space-y-6 relative">
+                    <div className="bg-white border-b sticky top-14 z-10 py-2 -mx-4 px-4 shadow-sm">
+                        <h2 className="text-lg font-bold text-blue-800">OSDI 干眼问卷</h2>
+                        <p className="text-xs text-gray-500">请回顾过去一周您的情况</p>
+                    </div>
+
+                    <div className="space-y-8">
+                        {['A', 'B', 'C'].map(section => {
+                            const sectionQuestions = questions.filter(q => q.section === section);
+                            let title = "";
+                            if(section === 'A') title = "在过去的一周内眼睛是否有以下不适？(必填)";
+                            if(section === 'B') title = "在过去一周内，是否因视力或不适使以下活动受限？";
+                            if(section === 'C') title = "在过去一周内，眼睛在以下环境中是否感到不适？";
+
+                            return (
+                                <div key={section} className="bg-white rounded-lg">
+                                    <h3 className="font-bold text-sm bg-blue-50 text-blue-800 p-2 rounded mb-3 border-l-4 border-blue-500">{title}</h3>
+                                    <div className="space-y-6">
+                                        {sectionQuestions.map(q => (
+                                            <div key={q.id} className="pb-4 border-b border-gray-100 last:border-0">
+                                                <p className="font-medium text-gray-800 mb-3 text-sm">{q.id}. {q.text}</p>
+                                                <div className="grid grid-cols-5 gap-1">
+                                                    {options.map(opt => (
+                                                        <button
+                                                            key={opt.val}
+                                                            onClick={() => handleSelect(q.id, opt.val)}
+                                                            className={`flex flex-col items-center justify-center p-2 rounded text-xs transition-all ${
+                                                                responses[q.id] === opt.val 
+                                                                    ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' 
+                                                                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            <span className="font-bold text-lg mb-1">{opt.val}</span>
+                                                            <span className="scale-75 origin-top text-center leading-tight">{opt.label}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                {!q.required && (
+                                                    <button
+                                                        onClick={() => handleSelect(q.id, -1)}
+                                                        className={`mt-2 w-full py-2 text-xs rounded border transition ${
+                                                            responses[q.id] === -1
+                                                                ? 'bg-gray-600 text-white border-gray-600'
+                                                                : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        不作答 / N/A (未进行此项活动)
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {error && (
+                        <div className="fixed bottom-20 left-4 right-4 z-20 bg-red-600 text-white p-4 rounded-xl shadow-2xl flex items-center justify-center animate-bounce">
+                            <AlertCircle className="w-5 h-5 mr-2" />
+                            <span className="font-bold">{error}</span>
+                        </div>
+                    )}
+
+                    <button onClick={calculate} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg mt-4 mb-8">
+                        提交评分
+                    </button>
+
+                    {showResultModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform scale-100 transition-all">
+                                <h3 className="text-xl font-bold text-center mb-4 text-slate-800">评估结果</h3>
+                                <div className="bg-blue-50 rounded-xl p-4 text-center mb-6">
+                                    <div className="text-sm text-slate-500 mb-1">您的 OSDI 评分</div>
+                                    <div className="text-4xl font-black text-blue-600 mb-2">{calculationResult.score}</div>
+                                    <div className="text-sm font-medium text-slate-600">
+                                        考虑有 <span className="text-blue-600 font-bold">{calculationResult.severity}</span> 干眼症状
+                                    </div>
+                                </div>
+                                <button onClick={confirmResult} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg">
+                                    下一步
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const ExclusionStep = ({ onNext, onReject }) => {
+            const criteria = [
+                "近12个月内做过眼部手术（如LASIK、SMILE等）或有过眼外伤",
+                "近2周佩戴隐形眼镜，且无法在研究期间（约3个月）停戴",
+                "近3个月内有急性过敏性结膜炎、感染或眼表炎症",
+                "正在使用干眼相关眼药水，且不愿暂停使用（需咨询医生是否可停药）",
+                "确诊有青光眼、眼睑功能异常、神经系统或精神类疾病",
+                "孕妇、哺乳期或腿脚不便者"
+            ];
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="text-center mb-6">
+                        <ClipboardList className="w-12 h-12 text-blue-500 mx-auto mb-2" />
+                        <h2 className="text-xl font-bold text-slate-800">快速筛查</h2>
+                        <p className="text-slate-500 text-sm">请确认是否存在以下任何一种情况：</p>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        {criteria.map((item, idx) => (
+                            <div key={idx} className="p-4 border-b border-slate-100 last:border-0 flex items-start">
+                                <div className="bg-red-50 text-red-500 rounded-full p-1 mr-3 mt-0.5 min-w-[24px] text-center text-xs font-bold">
+                                    {idx + 1}
+                                </div>
+                                <p className="text-sm text-slate-700">{item}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="space-y-3 pt-4">
+                        <p className="text-center text-sm font-bold text-slate-800 mb-2">以上情况，您是否<span className="text-red-600">有任意一项</span>符合？</p>
+                        
+                        <button 
+                            onClick={() => onReject("根据研究方案，存在以上任意一种情况的患者暂时无法纳入本研究。非常感谢您的参与和支持！")}
+                            className="w-full bg-white border-2 border-slate-200 text-slate-600 font-bold py-3 px-6 rounded-xl hover:bg-slate-50 transition"
+                        >
+                            是的，我有其中一项或多项
+                        </button>
+                        
+                        <button 
+                            onClick={onNext}
+                            className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 transition"
+                        >
+                            不，以上情况我都没有
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const CommitmentStep = ({ onNext, onReject }) => {
+            return (
+                <div className="space-y-6 animate-fade-in text-center">
+                    <Clock className="w-16 h-16 text-green-500 mx-auto" />
+                    <h2 className="text-xl font-bold text-slate-800">时间与意愿评估</h2>
+                    
+                    <div className="bg-green-50 p-5 rounded-xl border border-green-100 text-left space-y-3">
+                        <p className="text-sm font-bold text-green-800">我们需要您能够配合：</p>
+                        <ul className="list-disc list-inside text-sm text-green-800 space-y-1">
+                            <li>参与为期 <span className="font-bold">8周</span> 的居家低强度运动</li>
+                            <li>每周完成 <span className="font-bold">5-7天</span> 的运动锻炼</li>
+                            <li>每天约 <span className="font-bold">24分钟</span> (八段锦练习)</li>
+                        </ul>
+                    </div>
+
+                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-left">
+                        <p className="text-sm font-bold text-blue-800 mb-2">我们将为您提供：</p>
+                        <div className="flex items-center text-sm text-slate-700 mb-2">
+                            <CheckCircle className="w-4 h-4 mr-2 text-blue-500" />
+                            免费获得专业眼表检查及评估
+                        </div>
+                        <div className="flex items-center text-sm text-slate-700">
+                            <CheckCircle className="w-4 h-4 mr-2 text-blue-500" />
+                            提供一定的交通补贴
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                        <button 
+                            onClick={onNext}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition"
+                        >
+                            我可以配合，进入下一步
+                        </button>
+                        
+                        <button 
+                            onClick={() => onReject("由于本研究需要严格的时间投入以保证疗效观察，非常遗憾暂时无法将您纳入。感谢您的关注！")}
+                            className="w-full bg-transparent text-slate-400 text-sm py-2"
+                        >
+                            我可能没有足够的时间
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const InfoStep = ({ userInfo, setUserInfo, onNext }) => {
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                setUserInfo(prev => ({ ...prev, [name]: value }));
+            };
+
+            const isComplete = userInfo.nameAndWechat;
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="text-center">
+                        <FileText className="w-12 h-12 text-blue-500 mx-auto mb-2" />
+                        <h2 className="text-xl font-bold text-slate-800">基本信息登记</h2>
+                        <p className="text-sm text-slate-500">用于医生联系确认身份及建立档案</p>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">姓名 / 微信名 <span className="text-red-500">*</span></label>
+                            <input 
+                                type="text" 
+                                name="nameAndWechat"
+                                value={userInfo.nameAndWechat}
+                                onChange={handleChange}
+                                placeholder="请输入您的真实姓名和微信名"
+                                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">方便我们添加您微信进行后续指导</p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">其他疾病说明</label>
+                            <textarea 
+                                name="otherDiseases"
+                                value={userInfo.otherDiseases}
+                                onChange={handleChange}
+                                placeholder="除干眼、屈光不正外，是否有其他眼部或全身疾病？（无则填无）"
+                                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">正在使用的眼药水</label>
+                            <input 
+                                type="text" 
+                                name="eyeDrops"
+                                value={userInfo.eyeDrops}
+                                onChange={handleChange}
+                                placeholder="请列出药名（无则填无）"
+                                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={onNext}
+                        disabled={!isComplete}
+                        className={`w-full font-bold py-3 px-6 rounded-xl shadow-lg transition ${isComplete ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                    >
+                        生成入组凭证
+                    </button>
+                </div>
+            );
+        };
+
+        const ResultStep = ({ score, severity, userInfo }) => {
+            return (
+                <div className="space-y-6 animate-fade-in pb-10">
+                    <div className="bg-green-100 text-green-800 p-4 rounded-xl flex items-center justify-center">
+                        <CheckCircle className="w-6 h-6 mr-2" />
+                        <span className="font-bold">恭喜！您初步符合入组条件</span>
+                    </div>
+
+                    <div className="bg-white p-0 rounded-2xl shadow-xl border-2 border-blue-100 overflow-hidden relative">
+                        <div className="bg-blue-600 text-white p-4 text-center">
+                            <h3 className="text-xl font-bold">入组筛查凭证</h3>
+                            <p className="text-blue-100 text-xs mt-1">请截图保存本页面发送给医生</p>
+                        </div>
+                        
+                        <div className="p-6 space-y-4">
+                            <div className="text-center py-4 border-b border-dashed border-gray-200">
+                                <div className="text-gray-500 text-xs uppercase tracking-wide mb-1">OSDI 评分</div>
+                                <div className="text-5xl font-black text-blue-600">{score}</div>
+                                <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-2 ${
+                                    severity === '中重度' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                                }`}>
+                                    {severity}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 text-sm text-slate-700">
+                                <div className="flex justify-between border-b border-gray-100 py-2">
+                                    <span className="text-gray-500">姓名/微信</span>
+                                    <span className="font-bold">{userInfo.nameAndWechat}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-gray-100 py-2">
+                                    <span className="text-gray-500">其他疾病</span>
+                                    <span className="font-bold text-right truncate w-1/2">{userInfo.otherDiseases || '无'}</span>
+                                </div>
+                                <div className="flex justify-between py-2">
+                                    <span className="text-gray-500">眼药水</span>
+                                    <span className="font-bold text-right truncate w-1/2">{userInfo.eyeDrops || '无'}</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex flex-col items-center justify-center bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
+                                <div className="w-40 h-40 bg-white flex items-center justify-center mb-2 overflow-hidden rounded-lg shadow-sm border border-gray-200">
+                                    <div className="text-center p-0 w-full h-full">
+                                         <img 
+                                            src="code.png" 
+                                            alt="请将您的二维码图片命名为 code.png 并放在同一文件夹下" 
+                                            className="w-full h-full object-cover" 
+                                         />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 font-medium">长按识别/扫码添加招募人微信</p>
+                                <p className="text-xs text-blue-500 font-bold mt-1">请发送此截图进行确认</p>
+                                <p className="text-[10px] text-gray-400 mt-2">（如果二维码未显示，请确认已将图片命名为 code.png 并与网页文件放在同一文件夹下）</p>
+                            </div>
+                        </div>
+                        
+                        <div className="absolute -left-3 top-48 w-6 h-6 bg-slate-50 rounded-full"></div>
+                        <div className="absolute -right-3 top-48 w-6 h-6 bg-slate-50 rounded-full"></div>
+                    </div>
+
+                    <div className="text-center text-xs text-gray-400">
+                        信息已自动保存，再次打开本应用可查看
+                    </div>
+                </div>
+            );
+        };
+
+        const RejectStep = ({ reason, onRestart }) => (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-6 p-6 animate-fade-in">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Info className="w-10 h-10 text-gray-500" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-700">提示</h2>
+                <p className="text-center text-gray-600 leading-relaxed bg-gray-50 p-5 rounded-lg border border-gray-100 shadow-sm">
+                    {reason}
+                </p>
+                <button 
+                    onClick={onRestart}
+                    className="flex items-center text-blue-600 font-bold hover:text-blue-700 mt-4 px-4 py-2 rounded-lg hover:bg-blue-50 transition"
+                >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    重新评估
+                </button>
+            </div>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
