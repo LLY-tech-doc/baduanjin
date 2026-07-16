@@ -1,0 +1,6 @@
+{
+  "name": "干眼行为干预对照试验预筛",
+  "description": "行为干预对比人工泪液治疗干眼的随机对照试验临床研究志愿者预筛选",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
